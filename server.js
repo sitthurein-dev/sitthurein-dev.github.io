@@ -114,25 +114,6 @@ const VALID_DIRECTIONS = new Set(["BUY", "SELL"]);
 const VALID_RESULTS = new Set(["WIN", "LOSS", "BREAKEVEN", "OPEN"]);
 const VALID_REACTIONS = new Set(["love", "heartbreak"]);
 
-function calculatePips(pair, direction, entryPrice, exitPrice) {
-  if (entryPrice <= 0 || exitPrice <= 0) return 0;
-  const normalizedPair = String(pair || "").toUpperCase();
-  const multiplier = normalizedPair.includes("JPY") ? 100 : 10000;
-  const isSell = String(direction || "").toUpperCase() === "SELL";
-  const diff = isSell ? (entryPrice - exitPrice) : (exitPrice - entryPrice);
-  return Number((diff * multiplier).toFixed(1));
-}
-
-function supportTierFromAmount(amount) {
-  const value = readNumber(amount, 0);
-  if (value >= 100) return "Diamond";
-  if (value >= 50) return "Platinum";
-  if (value >= 25) return "Gold";
-  if (value >= 10) return "Silver";
-  if (value > 0) return "Bronze";
-  return "";
-}
-
 function normalizeString(value, fallback = "", maxLength = 50) {
   const result = String(value ?? fallback).trim();
   if (!result) return fallback;
@@ -159,13 +140,6 @@ function validateShareTradePayload(data) {
   const entryPrice = readNumber(data.entry_price ?? data.entryPrice, 0);
   const exitPrice = readNumber(data.exit_price ?? data.exitPrice, 0);
   const pnl = readNumber(data.pnl, 0);
-  const pips = readNumber(data.pips, null);
-  const supportAmount = readNumber(data.support_amount ?? data.supportAmount, 0);
-  const supporterTier = normalizeString(
-    data.supporter_tier || data.supporterTier || supportTierFromAmount(supportAmount),
-    "",
-    20
-  );
   const tradeTime = normalizeString(
     data.trade_time || data.tradeTime || new Date().toISOString(),
     new Date().toISOString(),
@@ -208,9 +182,6 @@ function validateShareTradePayload(data) {
       entryPrice,
       exitPrice,
       pnl,
-      pips,
-      supportAmount,
-      supporterTier,
       tradeTime,
     },
   };
@@ -306,9 +277,6 @@ app.post("/api/feed/share-trade", (req, res) => {
     entryPrice: data.entryPrice,
     exitPrice: data.exitPrice,
     pnl: data.pnl,
-    pips: data.pips ?? calculatePips(data.pair, data.direction, data.entryPrice, data.exitPrice),
-    supportAmount: data.supportAmount,
-    supporterTier: data.supporterTier || supportTierFromAmount(data.supportAmount),
     tradeTime: data.tradeTime,
     displayName: "Pre-Billionarie",
     emojiAvatar: getEmoji(data.userId),
